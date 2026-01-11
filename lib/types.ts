@@ -132,3 +132,19 @@ export interface ChatRequest {
   ragContext?: RAGContext[];
   history?: Message[];
 }
+
+// Generation Metrics Types
+export interface GenerationMetrics {
+  // コンテキスト情報
+  contextWindowSize: number;      // コンテキストウィンドウサイズ（トークン）
+  inputTokens: number;            // 入力トークン数（推定）
+  outputTokens: number;           // 出力トークン数（推定）
+  contextUsagePercent: number;    // コンテキスト使用率（%）
+
+  // 生成速度
+  tokensPerSecond: number;        // 出力トークン/秒
+  totalTimeMs: number;            // 総生成時間（ミリ秒）
+
+  // ステータス
+  isGenerating: boolean;          // 生成中かどうか
+}

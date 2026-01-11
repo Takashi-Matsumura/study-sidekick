@@ -4,8 +4,27 @@ import { useState, useCallback, useRef } from 'react';
 import { Settings, SettingsButton } from '@/components/Settings';
 import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
+import { MetricsDisplay } from '@/components/MetricsDisplay';
 import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS } from '@/lib/types';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics } from '@/lib/types';
+
+// トークン数推定（日本語混在テキスト用）
+// 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
+// 混合の場合は約2文字/トークンとして推定
+function estimateTokenCount(text: string): number {
+  if (!text) return 0;
+  // 日本語文字の割合を計算
+  const japaneseChars = (text.match(/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g) || []).length;
+  const totalChars = text.length;
+  const japaneseRatio = japaneseChars / totalChars;
+
+  // 日本語が多い場合は1.5文字/トークン、英語が多い場合は4文字/トークン
+  const avgCharsPerToken = japaneseRatio * 1.5 + (1 - japaneseRatio) * 4;
+  return Math.ceil(totalChars / avgCharsPerToken);
+}
+
+// デフォルトのコンテキストウィンドウサイズ（多くのローカルLLMのデフォルト）
+const DEFAULT_CONTEXT_WINDOW = 4096;
 
 export default function Home() {
   // デフォルトはllama.cpp
@@ -21,9 +40,21 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [metrics, setMetrics] = useState<GenerationMetrics>({
+    contextWindowSize: DEFAULT_CONTEXT_WINDOW,
+    inputTokens: 0,
+    outputTokens: 0,
+    contextUsagePercent: 0,
+    tokensPerSecond: 0,
+    totalTimeMs: 0,
+    isGenerating: false,
+  });
 
   const chatInputRef = useRef<ChatInputRef>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const generationStartTimeRef = useRef<number>(0);
+  const lastTokenCountRef = useRef<number>(0);
+  const lastTokenTimeRef = useRef<number>(0);
 
   const focusInput = useCallback(() => {
     setTimeout(() => {
@@ -51,6 +82,23 @@ export default function Home() {
   const handleSubmit = useCallback(async (message: string, mode: ChatMode | null) => {
     setIsLoading(true);
     setStreamingContent('');
+
+    // メトリクスを初期化
+    const historyTokens = messages.reduce((sum, msg) => sum + estimateTokenCount(msg.content), 0);
+    const inputTokens = estimateTokenCount(message) + historyTokens;
+    generationStartTimeRef.current = Date.now();
+    lastTokenCountRef.current = 0;
+    lastTokenTimeRef.current = Date.now();
+
+    setMetrics(prev => ({
+      ...prev,
+      inputTokens,
+      outputTokens: 0,
+      contextUsagePercent: (inputTokens / prev.contextWindowSize) * 100,
+      tokensPerSecond: 0,
+      totalTimeMs: 0,
+      isGenerating: true,
+    }));
 
     // AbortControllerを作成
     abortControllerRef.current = new AbortController();
@@ -173,6 +221,29 @@ export default function Home() {
             if (data.content) {
               content += data.content;
               setStreamingContent(content);
+
+              // メトリクスを更新
+              const currentTime = Date.now();
+              const outputTokens = estimateTokenCount(content);
+              const elapsedMs = currentTime - generationStartTimeRef.current;
+
+              // 直近のトークン/秒を計算（スムージング）
+              const timeSinceLastUpdate = currentTime - lastTokenTimeRef.current;
+              const tokensSinceLastUpdate = outputTokens - lastTokenCountRef.current;
+
+              if (timeSinceLastUpdate > 100) { // 100ms以上経過したら更新
+                const recentTokensPerSecond = (tokensSinceLastUpdate / timeSinceLastUpdate) * 1000;
+                lastTokenCountRef.current = outputTokens;
+                lastTokenTimeRef.current = currentTime;
+
+                setMetrics(prev => ({
+                  ...prev,
+                  outputTokens,
+                  contextUsagePercent: ((prev.inputTokens + outputTokens) / prev.contextWindowSize) * 100,
+                  tokensPerSecond: recentTokensPerSecond,
+                  totalTimeMs: elapsedMs,
+                }));
+              }
             }
           } catch {
             // Skip malformed JSON
@@ -209,6 +280,17 @@ export default function Home() {
       abortControllerRef.current = null;
       setIsLoading(false);
       setStreamingContent('');
+
+      // メトリクスの最終更新
+      const finalTime = Date.now() - generationStartTimeRef.current;
+      setMetrics(prev => ({
+        ...prev,
+        totalTimeMs: finalTime,
+        isGenerating: false,
+        // 平均トークン/秒を計算
+        tokensPerSecond: finalTime > 0 ? (prev.outputTokens / finalTime) * 1000 : 0,
+      }));
+
       focusInput();
     }
   }, [llmConfig, focusInput, messages, ragCategory, ragEnabled]);
@@ -260,12 +342,18 @@ export default function Home() {
           </div>
 
           {/* 右側：出力 */}
-          <div className="flex-1 bg-white dark:bg-zinc-900 overflow-hidden">
-            <ChatOutput
-              messages={messages}
-              isLoading={isLoading}
-              streamingContent={streamingContent}
-            />
+          <div className="flex-1 bg-white dark:bg-zinc-900 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden">
+              <ChatOutput
+                messages={messages}
+                isLoading={isLoading}
+                streamingContent={streamingContent}
+              />
+            </div>
+            {/* チャットエリアのフッター：メトリクス表示 */}
+            <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-2 bg-zinc-50 dark:bg-zinc-900/50 flex justify-center">
+              <MetricsDisplay metrics={metrics} />
+            </div>
           </div>
         </div>
       </main>

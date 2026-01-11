@@ -14,6 +14,11 @@ Study Sidekickは、ローカルで動作するLLM（LM Studio / Ollama / llama.
   - **やさしく説明**: 難しい概念を高校生向けにかみ砕いて説明
   - **企画アイデア**: 新規企画のアイデアを構造化して提案
   - **検索して要約**: Webを検索して要点を整理
+- **生成AIメトリクス表示**: チャット画面下部にリアルタイムで表示
+  - コンテキストウィンドウの使用量（プログレスバー付き）
+  - 入力/出力トークン数
+  - 生成速度（トークン/秒）
+  - 生成時間
 
 ## セットアップ
 
@@ -97,6 +102,7 @@ study-sidekick/
 ├── components/
 │   ├── ChatInput.tsx        # 入力フォーム
 │   ├── ChatOutput.tsx       # 出力表示
+│   ├── MetricsDisplay.tsx   # 生成AIメトリクス表示
 │   └── Settings.tsx         # LLM設定UI
 ├── lib/
 │   ├── llm/
