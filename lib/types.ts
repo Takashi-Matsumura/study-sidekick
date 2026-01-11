@@ -20,7 +20,7 @@ export interface LLMResponse {
 }
 
 // Chat Mode Types
-export type ChatMode = 'explain' | 'idea' | 'search';
+export type ChatMode = 'explain' | 'idea' | 'search' | 'rag';
 
 export interface ChatModeInfo {
   id: ChatMode;
@@ -47,6 +47,12 @@ export const CHAT_MODES: ChatModeInfo[] = [
     name: '検索して要約',
     description: 'Webを検索して要点をまとめます',
     icon: 'search',
+  },
+  {
+    id: 'rag',
+    name: 'ナレッジ検索',
+    description: '社内ナレッジベースから回答します',
+    icon: 'database',
   },
 ];
 
@@ -96,6 +102,25 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: SearchResult[];
+  ragSources?: RAGContext[];
+}
+
+// RAG Types
+export interface RAGContext {
+  content: string;
+  metadata: {
+    filename: string;
+    chunk_index: number;
+    total_chunks: number;
+    category?: string;
+  };
+  score: number;
+}
+
+export interface RAGQueryResponse {
+  context: RAGContext[];
+  query: string;
+  retrieved_count: number;
 }
 
 // API Request Types
@@ -104,5 +129,6 @@ export interface ChatRequest {
   mode: ChatMode | null;
   llmConfig: LLMConfig;
   searchResults?: SearchResult[];
+  ragContext?: RAGContext[];
   history?: Message[];
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Message, SearchResult } from '@/lib/types';
-import { GraduationCapIcon, LinkIcon } from './Icons';
+import { Message, SearchResult, RAGContext } from '@/lib/types';
+import { GraduationCapIcon, LinkIcon, DatabaseIcon } from './Icons';
 
 interface ChatOutputProps {
   messages: Message[];
@@ -71,6 +71,9 @@ export function ChatOutput({ messages, isLoading, streamingContent }: ChatOutput
                   <MarkdownContent content={message.content} />
                   {message.sources && message.sources.length > 0 && (
                     <SourceLinks sources={message.sources} />
+                  )}
+                  {message.ragSources && message.ragSources.length > 0 && (
+                    <RAGSourceLinks sources={message.ragSources} />
                   )}
                 </div>
               )}
@@ -232,6 +235,34 @@ function SourceLinks({ sources }: { sources: SearchResult[] }) {
             >
               {source.title || source.url}
             </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function RAGSourceLinks({ sources }: { sources: RAGContext[] }) {
+  // ファイル名で重複を除去
+  const uniqueFiles = Array.from(
+    new Map(sources.map((s) => [s.metadata.filename, s])).values()
+  );
+
+  return (
+    <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+      <h4 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 mb-2 flex items-center gap-1">
+        <DatabaseIcon className="w-4 h-4" />
+        参照ドキュメント
+      </h4>
+      <ul className="space-y-1">
+        {uniqueFiles.map((source, i) => (
+          <li key={i} className="text-sm flex items-center gap-2">
+            <span className="text-zinc-600 dark:text-zinc-400">
+              {source.metadata.filename}
+            </span>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              (関連度: {Math.round(source.score * 100)}%)
+            </span>
           </li>
         ))}
       </ul>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef, useMemo, useEffect } from 'react';
 import { ChatMode, CHAT_MODES } from '@/lib/types';
 import { ModeIcon } from './Icons';
 
@@ -8,6 +8,7 @@ interface ChatInputProps {
   onSubmit: (message: string, mode: ChatMode | null) => void;
   isLoading: boolean;
   onCancel?: () => void;
+  ragEnabled?: boolean;
 }
 
 export interface ChatInputRef {
@@ -15,13 +16,25 @@ export interface ChatInputRef {
 }
 
 export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatInput(
-  { onSubmit, isLoading, onCancel },
+  { onSubmit, isLoading, onCancel, ragEnabled = false },
   ref
 ) {
   const [message, setMessage] = useState('');
   const [mode, setMode] = useState<ChatMode>('explain');
   const [modeEnabled, setModeEnabled] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // RAGが有効な場合のみ'rag'モードを表示
+  const availableModes = useMemo(() => {
+    return CHAT_MODES.filter((m) => m.id !== 'rag' || ragEnabled);
+  }, [ragEnabled]);
+
+  // RAGが無効になった場合、ragモードから別のモードに切り替え
+  useEffect(() => {
+    if (!ragEnabled && mode === 'rag') {
+      setMode('explain');
+    }
+  }, [ragEnabled, mode]);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -69,7 +82,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
         </div>
         {modeEnabled ? (
           <div className="space-y-2">
-            {CHAT_MODES.map((m) => (
+            {availableModes.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
@@ -109,6 +122,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
           {modeEnabled && mode === 'explain' && '何について知りたい？'}
           {modeEnabled && mode === 'idea' && '企画のテーマ・条件は？'}
           {modeEnabled && mode === 'search' && '何を調べる？'}
+          {modeEnabled && mode === 'rag' && 'ナレッジベースに質問'}
         </label>
         <textarea
           ref={textareaRef}
@@ -122,7 +136,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
               ? '例: プログラミングの「変数」って何？'
               : mode === 'idea'
               ? '例: 高校生向けの学習アプリを作りたい'
-              : '例: 2024年のAI技術トレンド'
+              : mode === 'search'
+              ? '例: 2024年のAI技術トレンド'
+              : '例: このアプリについて教えて'
           }
           className="flex-1 min-h-[120px] p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}

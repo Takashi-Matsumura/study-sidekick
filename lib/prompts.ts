@@ -1,4 +1,4 @@
-import { ChatMode, SearchResult } from './types';
+import { ChatMode, SearchResult, RAGContext } from './types';
 
 const COMMON_SYSTEM_PROMPT = `あなたは高校生インターン向けの学習・発想支援AIアシスタントです。
 
@@ -44,6 +44,15 @@ const SEARCH_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
 - 複数の情報源がある場合は、比較・整理する
 - 検索結果にない情報は推測であることを明記する`;
 
+const RAG_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
+
+## このモードの特徴
+「ナレッジ検索」モードです。社内ナレッジベースの情報をもとに回答します。
+- ナレッジベースから取得した情報を元に、正確に回答する
+- 情報の出典（どのドキュメントから得たか）を明記する
+- ナレッジベースにない情報は「ナレッジベースには該当する情報がありません」と伝える
+- 複数のドキュメントに関連情報がある場合は、整理して回答する`;
+
 export function getSystemPrompt(mode: ChatMode): string {
   switch (mode) {
     case 'explain':
@@ -52,6 +61,8 @@ export function getSystemPrompt(mode: ChatMode): string {
       return IDEA_SYSTEM_PROMPT;
     case 'search':
       return SEARCH_SYSTEM_PROMPT;
+    case 'rag':
+      return RAG_SYSTEM_PROMPT;
     default:
       return COMMON_SYSTEM_PROMPT;
   }
@@ -94,4 +105,38 @@ ${query}
 ## 回答のフォーマット
 「目的」「ターゲット」「価値」「実現方法」「必要な技術」「リスク」「次のアクション」を含めて回答してください。
 最初に「結論」として、アイデアの概要を1〜3行でまとめてください。`;
+}
+
+export function buildRAGPrompt(query: string, ragContext: RAGContext[]): string {
+  if (ragContext.length === 0) {
+    return `## ユーザーの質問
+${query}
+
+## ナレッジベース検索結果
+関連する情報が見つかりませんでした。
+
+## 回答
+ナレッジベースに該当する情報がないことを伝え、可能であれば一般的な情報を提供してください。`;
+  }
+
+  const contextText = ragContext
+    .map((ctx, i) => {
+      const score = Math.round(ctx.score * 100);
+      return `[${i + 1}] ドキュメント: ${ctx.metadata.filename} (関連度: ${score}%)
+内容:
+${ctx.content}`;
+    })
+    .join('\n\n---\n\n');
+
+  return `## ユーザーの質問
+${query}
+
+## ナレッジベースから取得した関連情報
+以下のナレッジベースの情報をもとに回答してください。
+
+${contextText}
+
+## 回答のフォーマット
+上記のナレッジベース情報をもとに、「結論」「要点」「くわしく」「次にやること」の順で回答してください。
+回答の最後に「参照ドキュメント」として使用した情報源のドキュメント名を付けてください。`;
 }

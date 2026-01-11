@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { createLLMProvider } from '@/lib/llm/provider';
-import { getSystemPrompt, buildExplainPrompt, buildIdeaPrompt, buildSearchPrompt } from '@/lib/prompts';
+import { getSystemPrompt, buildExplainPrompt, buildIdeaPrompt, buildSearchPrompt, buildRAGPrompt } from '@/lib/prompts';
 import { ChatRequest } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, mode, llmConfig, searchResults, history } = body as ChatRequest;
+    const { message, mode, llmConfig, searchResults, ragContext, history } = body as ChatRequest;
 
     if (!message || !llmConfig) {
       return new Response(
@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
             );
           }
           userPrompt = buildSearchPrompt(message, searchResults);
+          break;
+        case 'rag':
+          userPrompt = buildRAGPrompt(message, ragContext || []);
           break;
         default:
           userPrompt = message;

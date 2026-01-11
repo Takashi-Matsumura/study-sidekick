@@ -4,8 +4,8 @@ import { useState, useCallback, useRef } from 'react';
 import { Settings, SettingsButton } from '@/components/Settings';
 import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
-import { GraduationCapIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, PROVIDER_PRESETS } from '@/lib/types';
+import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS } from '@/lib/types';
 
 export default function Home() {
   // デフォルトはllama.cpp
@@ -16,6 +16,8 @@ export default function Home() {
     model: llamaCppPreset.defaultModel,
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [ragEnabled, setRagEnabled] = useState(false);
+  const [ragCategory, setRagCategory] = useState('study');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
@@ -58,6 +60,7 @@ export default function Home() {
     setMessages((prev) => [...prev, { role: 'user', content: message }]);
 
     let searchResults: SearchResult[] = [];
+    let ragContext: RAGContext[] = [];
 
     try {
       // 検索モードの場合は先に検索
@@ -83,6 +86,39 @@ export default function Home() {
         setStreamingContent('[要約を作成中...]');
       }
 
+      // RAGが有効な場合はナレッジベースを検索（モードに関係なく）
+      if (ragEnabled) {
+        setStreamingContent('[ナレッジベース検索中...]');
+        const ragResponse = await fetch('/api/rag', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: message,
+            topK: 5,
+            threshold: 0.3,
+            category: ragCategory || undefined,
+          }),
+          signal,
+        });
+
+        const ragData = await ragResponse.json();
+        if (ragData.error) {
+          throw new Error(ragData.error);
+        }
+
+        // カテゴリが指定されている場合はフィルタリング
+        const allContext = ragData.context || [];
+        if (ragCategory) {
+          ragContext = allContext.filter(
+            (ctx: RAGContext) => ctx.metadata.category === ragCategory
+          );
+        } else {
+          ragContext = allContext;
+        }
+
+        setStreamingContent('[回答を生成中...]');
+      }
+
       // LLMに送信（履歴を含める）
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -92,6 +128,7 @@ export default function Home() {
           mode,
           llmConfig,
           searchResults: mode === 'search' ? searchResults : undefined,
+          ragContext: ragEnabled && ragContext.length > 0 ? ragContext : undefined,
           history: messages,
         }),
         signal,
@@ -151,6 +188,7 @@ export default function Home() {
             role: 'assistant',
             content,
             sources: mode === 'search' ? searchResults : undefined,
+            ragSources: ragEnabled && ragContext.length > 0 ? ragContext : undefined,
           },
         ]);
       }
@@ -173,7 +211,7 @@ export default function Home() {
       setStreamingContent('');
       focusInput();
     }
-  }, [llmConfig, focusInput, messages]);
+  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -185,6 +223,12 @@ export default function Home() {
             Study Sidekick
           </h1>
           <div className="flex items-center gap-2">
+            {ragEnabled && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium">
+                <DatabaseIcon className="w-3.5 h-3.5" />
+                RAG
+              </div>
+            )}
             {messages.length > 0 && (
               <button
                 onClick={() => setMessages([])}
@@ -211,6 +255,7 @@ export default function Home() {
               onSubmit={handleSubmit}
               isLoading={isLoading}
               onCancel={handleCancel}
+              ragEnabled={ragEnabled}
             />
           </div>
 
@@ -236,6 +281,10 @@ export default function Home() {
       <Settings
         config={llmConfig}
         onChange={setLlmConfig}
+        ragEnabled={ragEnabled}
+        onRagEnabledChange={setRagEnabled}
+        ragCategory={ragCategory}
+        onRagCategoryChange={setRagCategory}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
