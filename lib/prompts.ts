@@ -1,6 +1,7 @@
-import { ChatMode, SearchResult, RAGContext } from './types';
+import { ChatMode, SearchResult, RAGContext, SystemPrompts } from './types';
 
-const COMMON_SYSTEM_PROMPT = `あなたは高校生インターン向けの学習・発想支援AIアシスタントです。
+// デフォルトのシステムプロンプト（共通部分）
+const DEFAULT_COMMON_PROMPT = `あなたは高校生インターン向けの学習・発想支援AIアシスタントです。
 
 ## 回答のルール
 - やさしい言葉を使う（専門用語は使う場合は必ず()で補足説明を入れる）
@@ -14,17 +15,14 @@ const COMMON_SYSTEM_PROMPT = `あなたは高校生インターン向けの学�
 3. **くわしく**（短めの説明、専門用語には補足）
 4. **次にやること**（具体的なToDoを2〜3個）`;
 
-const EXPLAIN_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
-
-## このモードの特徴
+// デフォルトのモード別追加プロンプト
+const DEFAULT_EXPLAIN_PROMPT = `## このモードの特徴
 「やさしく説明」モードです。
 - 難しい概念を高校生にもわかるようにかみ砕いて説明する
 - 身近な例えを使って理解を助ける
 - 「なぜそうなるのか」理由も一緒に伝える`;
 
-const IDEA_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
-
-## このモードの特徴
+const DEFAULT_IDEA_PROMPT = `## このモードの特徴
 「企画アイデア」モードです。新しいアイデアを提案する際は、以下の項目を含めてください：
 
 1. **目的**：何を解決するのか、何を実現したいのか
@@ -35,36 +33,45 @@ const IDEA_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
 6. **リスク**：考えられる問題点や注意点
 7. **次のアクション**：今すぐ始められる最初の一歩`;
 
-const SEARCH_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
-
-## このモードの特徴
+const DEFAULT_SEARCH_PROMPT = `## このモードの特徴
 「検索して要約」モードです。検索結果をもとに回答します。
 - 検索で見つかった情報を元に、正確に要約する
 - 情報の出典（どのサイトから得たか）を明記する
 - 複数の情報源がある場合は、比較・整理する
 - 検索結果にない情報は推測であることを明記する`;
 
-const RAG_SYSTEM_PROMPT = `${COMMON_SYSTEM_PROMPT}
-
-## このモードの特徴
+const DEFAULT_RAG_PROMPT = `## このモードの特徴
 「ナレッジ検索」モードです。社内ナレッジベースの情報をもとに回答します。
 - ナレッジベースから取得した情報を元に、正確に回答する
 - 情報の出典（どのドキュメントから得たか）を明記する
 - ナレッジベースにない情報は「ナレッジベースには該当する情報がありません」と伝える
 - 複数のドキュメントに関連情報がある場合は、整理して回答する`;
 
-export function getSystemPrompt(mode: ChatMode): string {
+// デフォルトのシステムプロンプト一式をエクスポート
+export const DEFAULT_SYSTEM_PROMPTS: SystemPrompts = {
+  common: DEFAULT_COMMON_PROMPT,
+  explain: DEFAULT_EXPLAIN_PROMPT,
+  idea: DEFAULT_IDEA_PROMPT,
+  search: DEFAULT_SEARCH_PROMPT,
+  rag: DEFAULT_RAG_PROMPT,
+};
+
+// カスタムプロンプトを使用してシステムプロンプトを取得
+export function getSystemPrompt(mode: ChatMode, customPrompts?: SystemPrompts): string {
+  const prompts = customPrompts || DEFAULT_SYSTEM_PROMPTS;
+  const common = prompts.common;
+
   switch (mode) {
     case 'explain':
-      return EXPLAIN_SYSTEM_PROMPT;
+      return `${common}\n\n${prompts.explain}`;
     case 'idea':
-      return IDEA_SYSTEM_PROMPT;
+      return `${common}\n\n${prompts.idea}`;
     case 'search':
-      return SEARCH_SYSTEM_PROMPT;
+      return `${common}\n\n${prompts.search}`;
     case 'rag':
-      return RAG_SYSTEM_PROMPT;
+      return `${common}\n\n${prompts.rag}`;
     default:
-      return COMMON_SYSTEM_PROMPT;
+      return common;
   }
 }
 

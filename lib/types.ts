@@ -131,6 +131,16 @@ export interface ChatRequest {
   searchResults?: SearchResult[];
   ragContext?: RAGContext[];
   history?: Message[];
+  systemPrompts?: SystemPrompts;
+}
+
+// System Prompts Types
+export interface SystemPrompts {
+  common: string;       // 共通部分
+  explain: string;      // やさしく説明モード追加部分
+  idea: string;         // 企画アイデアモード追加部分
+  search: string;       // 検索して要約モード追加部分
+  rag: string;          // ナレッジ検索モード追加部分
 }
 
 // Generation Metrics Types

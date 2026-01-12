@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Settings, SettingsButton } from '@/components/Settings';
 import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
 import { MetricsDisplay } from '@/components/MetricsDisplay';
 import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics } from '@/lib/types';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts } from '@/lib/types';
+import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
+
+const SYSTEM_PROMPTS_STORAGE_KEY = 'study-sidekick-system-prompts';
 
 // トークン数推定（日本語混在テキスト用）
 // 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
@@ -37,8 +40,32 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ragEnabled, setRagEnabled] = useState(false);
   const [ragCategory, setRagCategory] = useState('study');
+  const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>(DEFAULT_SYSTEM_PROMPTS);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // localStorageからシステムプロンプトを読み込み
+  useEffect(() => {
+    const saved = localStorage.getItem(SYSTEM_PROMPTS_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // 保存されたプロンプトとデフォルトをマージ（新しいキーが追加された場合に対応）
+        setSystemPrompts({
+          ...DEFAULT_SYSTEM_PROMPTS,
+          ...parsed,
+        });
+      } catch {
+        // 無効なJSONの場合はデフォルトを使用
+      }
+    }
+  }, []);
+
+  // システムプロンプトが変更されたらlocalStorageに保存
+  const handleSystemPromptsChange = useCallback((prompts: SystemPrompts) => {
+    setSystemPrompts(prompts);
+    localStorage.setItem(SYSTEM_PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+  }, []);
   const [streamingContent, setStreamingContent] = useState('');
   const [metrics, setMetrics] = useState<GenerationMetrics>({
     contextWindowSize: DEFAULT_CONTEXT_WINDOW,
@@ -178,6 +205,7 @@ export default function Home() {
           searchResults: mode === 'search' ? searchResults : undefined,
           ragContext: ragEnabled && ragContext.length > 0 ? ragContext : undefined,
           history: messages,
+          systemPrompts,
         }),
         signal,
       });
@@ -293,7 +321,7 @@ export default function Home() {
 
       focusInput();
     }
-  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled]);
+  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled, systemPrompts]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -373,6 +401,8 @@ export default function Home() {
         onRagEnabledChange={setRagEnabled}
         ragCategory={ragCategory}
         onRagCategoryChange={setRagCategory}
+        systemPrompts={systemPrompts}
+        onSystemPromptsChange={handleSystemPromptsChange}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />

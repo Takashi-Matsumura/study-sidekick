@@ -6,7 +6,7 @@ import { ChatRequest } from '@/lib/types';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, mode, llmConfig, searchResults, ragContext, history } = body as ChatRequest;
+    const { message, mode, llmConfig, searchResults, ragContext, history, systemPrompts } = body as ChatRequest;
 
     if (!message || !llmConfig) {
       return new Response(
@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
       systemPrompt = undefined;
       userPrompt = message;
     } else {
-      systemPrompt = getSystemPrompt(mode);
+      // カスタムプロンプトが渡された場合はそれを使用
+      systemPrompt = getSystemPrompt(mode, systemPrompts);
       switch (mode) {
         case 'explain':
           userPrompt = buildExplainPrompt(message);

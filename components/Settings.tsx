@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { LLMConfig, PROVIDER_PRESETS, LLMProviderType } from '@/lib/types';
+import { LLMConfig, PROVIDER_PRESETS, LLMProviderType, SystemPrompts } from '@/lib/types';
+import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 import { SettingsIcon, InfoIcon, DatabaseIcon } from './Icons';
 
 interface RAGDocument {
@@ -17,12 +18,15 @@ interface SettingsProps {
   onRagEnabledChange: (enabled: boolean) => void;
   ragCategory: string;
   onRagCategoryChange: (category: string) => void;
+  systemPrompts: SystemPrompts;
+  onSystemPromptsChange: (prompts: SystemPrompts) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-type SettingsTab = 'llm' | 'rag';
+type SettingsTab = 'llm' | 'rag' | 'prompts';
 type RAGSubTab = 'settings' | 'documents' | 'upload';
+type PromptTab = 'common' | 'explain' | 'idea' | 'search' | 'rag';
 
 export function Settings({
   config,
@@ -31,11 +35,14 @@ export function Settings({
   onRagEnabledChange,
   ragCategory,
   onRagCategoryChange,
+  systemPrompts,
+  onSystemPromptsChange,
   isOpen,
   onClose,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('llm');
   const [ragSubTab, setRagSubTab] = useState<RAGSubTab>('settings');
+  const [promptTab, setPromptTab] = useState<PromptTab>('common');
   const [documents, setDocuments] = useState<RAGDocument[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
@@ -214,6 +221,16 @@ export function Settings({
             LLM設定
           </button>
           <button
+            onClick={() => setActiveTab('prompts')}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'prompts'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+            }`}
+          >
+            プロンプト設定
+          </button>
+          <button
             onClick={() => setActiveTab('rag')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'rag'
@@ -291,6 +308,103 @@ export function Settings({
                       <li>llama.cpp: <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">./server -m model.gguf</code></li>
                     </ul>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'prompts' && (
+            <div className="space-y-4">
+              {/* プロンプトサブタブ */}
+              <div className="flex gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg flex-wrap">
+                {[
+                  { id: 'common', label: '共通' },
+                  { id: 'explain', label: 'やさしく説明' },
+                  { id: 'idea', label: '企画アイデア' },
+                  { id: 'search', label: '検索して要約' },
+                  { id: 'rag', label: 'ナレッジ検索' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setPromptTab(tab.id as PromptTab)}
+                    className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      promptTab === tab.id
+                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* プロンプト説明 */}
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-3 rounded">
+                <div className="flex items-start gap-2">
+                  <InfoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    {promptTab === 'common' ? (
+                      <p>
+                        <strong>共通プロンプト</strong>：すべてのモードで使用される基本的な指示です。
+                        AIの役割や回答のルール・構成を定義します。
+                      </p>
+                    ) : (
+                      <p>
+                        <strong>モード別プロンプト</strong>：共通プロンプトに追加される、
+                        各モード固有の指示です。このモード特有の回答方法を定義します。
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* プロンプト編集エリア */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    {promptTab === 'common' && '共通システムプロンプト'}
+                    {promptTab === 'explain' && '「やさしく説明」モード追加プロンプト'}
+                    {promptTab === 'idea' && '「企画アイデア」モード追加プロンプト'}
+                    {promptTab === 'search' && '「検索して要約」モード追加プロンプト'}
+                    {promptTab === 'rag' && '「ナレッジ検索」モード追加プロンプト'}
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (confirm('このプロンプトをデフォルトに戻しますか？')) {
+                        onSystemPromptsChange({
+                          ...systemPrompts,
+                          [promptTab]: DEFAULT_SYSTEM_PROMPTS[promptTab],
+                        });
+                      }
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    デフォルトに戻す
+                  </button>
+                </div>
+                <textarea
+                  value={systemPrompts[promptTab]}
+                  onChange={(e) =>
+                    onSystemPromptsChange({
+                      ...systemPrompts,
+                      [promptTab]: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 h-64 resize-none font-mono"
+                  placeholder="システムプロンプトを入力..."
+                />
+                <div className="mt-1 text-xs text-zinc-400 dark:text-zinc-500 flex justify-between">
+                  <span>{systemPrompts[promptTab].length} 文字</span>
+                  <button
+                    onClick={() => {
+                      if (confirm('すべてのプロンプトをデフォルトに戻しますか？')) {
+                        onSystemPromptsChange(DEFAULT_SYSTEM_PROMPTS);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    すべてデフォルトに戻す
+                  </button>
                 </div>
               </div>
             </div>
