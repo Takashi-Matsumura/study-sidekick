@@ -46,7 +46,7 @@ export async function GET() {
       }),
       { headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch {
     return new Response(
       JSON.stringify({ status: 'error', message: 'ヘルスチェックに失敗しました' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

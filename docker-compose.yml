@@ -1,0 +1,17 @@
+services:
+  study-sidekick:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: study-sidekick
+    ports:
+      - "8585:8585"
+    environment:
+      - NODE_ENV=production
+      - PORT=8585
+      # RAGサーバーのURL（ホストマシンで動作している場合）
+      - RAG_BASE_URL=http://host.docker.internal:8000
+    restart: unless-stopped
+    # ホストマシンのサービスにアクセスするため
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

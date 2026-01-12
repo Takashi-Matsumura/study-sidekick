@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useImperativeHandle, forwardRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { ChatMode, CHAT_MODES } from '@/lib/types';
 import { ModeIcon } from './Icons';
 
@@ -30,10 +30,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
   }, [ragEnabled]);
 
   // RAGが無効になった場合、ragモードから別のモードに切り替え
-  useEffect(() => {
+  // 派生状態として計算し、UIでこの値を使用する
+  const effectiveMode = useMemo(() => {
     if (!ragEnabled && mode === 'rag') {
-      setMode('explain');
+      return 'explain' as ChatMode;
     }
+    return mode;
   }, [ragEnabled, mode]);
 
   useImperativeHandle(ref, () => ({
@@ -45,7 +47,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isLoading) return;
-    onSubmit(message.trim(), modeEnabled ? mode : null);
+    onSubmit(message.trim(), modeEnabled ? effectiveMode : null);
     setMessage('');
   };
 
@@ -53,7 +55,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       if (!message.trim() || isLoading) return;
-      onSubmit(message.trim(), modeEnabled ? mode : null);
+      onSubmit(message.trim(), modeEnabled ? effectiveMode : null);
       setMessage('');
     }
   };
@@ -87,17 +89,17 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatI
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
-                  mode === m.id
+                  effectiveMode === m.id
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={mode === m.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400'}>
+                  <span className={effectiveMode === m.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400'}>
                     <ModeIcon icon={m.icon} />
                   </span>
                   <div>
-                    <div className={`font-medium ${mode === m.id ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                    <div className={`font-medium ${effectiveMode === m.id ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
                       {m.name}
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">

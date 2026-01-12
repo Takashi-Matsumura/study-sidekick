@@ -123,7 +123,7 @@ export function Settings({
       } else {
         setUploadMessage({ type: 'error', text: data.error || '登録に失敗しました' });
       }
-    } catch (error) {
+    } catch {
       setUploadMessage({ type: 'error', text: '登録に失敗しました' });
     } finally {
       setUploading(false);

@@ -1,4 +1,4 @@
-import { RAGContext, RAGQueryResponse } from '../types';
+import { RAGQueryResponse } from '../types';
 
 const RAG_BASE_URL = process.env.RAG_BASE_URL || 'http://localhost:8000';
 

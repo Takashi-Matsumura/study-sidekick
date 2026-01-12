@@ -69,6 +69,32 @@ npm run dev
 
 ブラウザで http://localhost:3000 を開きます。
 
+### 4. Dockerでのデプロイ（本番環境）
+
+Docker Composeを使用してデプロイできます。
+
+```bash
+# イメージのビルドと起動
+docker compose up -d
+
+# ログの確認
+docker compose logs -f
+
+# 停止
+docker compose down
+```
+
+ブラウザで http://localhost:8585 を開きます。
+
+**ポート情報:**
+| サービス | ポート |
+|----------|--------|
+| Study Sidekick | 8585 |
+| RAGサーバー | 8000 |
+| llama.cpp | 8080 |
+| LM Studio | 1234 |
+| Ollama | 11434 |
+
 ## 使い方
 
 1. **LLM設定**（画面上部の「LLM設定」）
