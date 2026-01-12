@@ -103,6 +103,22 @@ docker compose down
 | LM Studio | 1234 |
 | Ollama | 11434 |
 
+#### DockerコンテナからローカルLLMに接続する
+
+Dockerコンテナ内からホストマシンで動作しているLLMサーバーに接続する場合、`localhost`ではなく`host.docker.internal`を使用する必要があります。
+
+**LLM設定画面での接続URL例:**
+
+| プロバイダ | 通常（ホスト直接） | Docker内から |
+|------------|-------------------|--------------|
+| llama.cpp | `http://localhost:8080/v1` | `http://host.docker.internal:8080/v1` |
+| LM Studio | `http://localhost:1234/v1` | `http://host.docker.internal:1234/v1` |
+| Ollama | `http://localhost:11434/v1` | `http://host.docker.internal:11434/v1` |
+
+RAGサーバーも同様に`http://host.docker.internal:8000`で接続できます（docker-compose.ymlで設定済み）。
+
+> **Note**: `host.docker.internal`はDockerがホストマシンを指すための特別なDNS名です。これにより、コンテナからホスト上で動作しているサービスにアクセスできます。
+
 ## 使い方
 
 1. **LLM設定**（画面上部の歯車アイコン →「LLM設定」タブ）
