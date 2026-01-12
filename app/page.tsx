@@ -370,7 +370,18 @@ export default function Home() {
             )}
             {messages.length > 0 && (
               <button
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([]);
+                  setMetrics({
+                    contextWindowSize: DEFAULT_CONTEXT_WINDOW,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    contextUsagePercent: 0,
+                    tokensPerSecond: 0,
+                    totalTimeMs: 0,
+                    isGenerating: false,
+                  });
+                }}
                 className="text-xs px-3 py-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors flex items-center gap-1"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
