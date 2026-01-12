@@ -10,6 +10,7 @@ import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESET
 import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 
 const SYSTEM_PROMPTS_STORAGE_KEY = 'study-sidekick-system-prompts';
+const LLM_CONFIG_STORAGE_KEY = 'study-sidekick-llm-config';
 
 // トークン数推定（日本語混在テキスト用）
 // 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
@@ -44,6 +45,23 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // localStorageからLLM設定を読み込み
+  useEffect(() => {
+    const savedLlmConfig = localStorage.getItem(LLM_CONFIG_STORAGE_KEY);
+    if (savedLlmConfig) {
+      try {
+        const parsed = JSON.parse(savedLlmConfig);
+        // URLの前後の空白を除去
+        setLlmConfig({
+          ...parsed,
+          baseUrl: parsed.baseUrl?.trim() || parsed.baseUrl,
+        });
+      } catch {
+        // 無効なJSONの場合はデフォルトを使用
+      }
+    }
+  }, []);
+
   // localStorageからシステムプロンプトを読み込み
   useEffect(() => {
     const saved = localStorage.getItem(SYSTEM_PROMPTS_STORAGE_KEY);
@@ -59,6 +77,17 @@ export default function Home() {
         // 無効なJSONの場合はデフォルトを使用
       }
     }
+  }, []);
+
+  // LLM設定が変更されたらlocalStorageに保存
+  const handleLlmConfigChange = useCallback((config: LLMConfig) => {
+    // URLの前後の空白を除去
+    const cleanedConfig = {
+      ...config,
+      baseUrl: config.baseUrl.trim(),
+    };
+    setLlmConfig(cleanedConfig);
+    localStorage.setItem(LLM_CONFIG_STORAGE_KEY, JSON.stringify(cleanedConfig));
   }, []);
 
   // システムプロンプトが変更されたらlocalStorageに保存
@@ -396,7 +425,7 @@ export default function Home() {
       {/* 設定モーダル */}
       <Settings
         config={llmConfig}
-        onChange={setLlmConfig}
+        onChange={handleLlmConfigChange}
         ragEnabled={ragEnabled}
         onRagEnabledChange={setRagEnabled}
         ragCategory={ragCategory}

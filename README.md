@@ -24,6 +24,9 @@ Study Sidekickは、ローカルで動作するLLM（LM Studio / Ollama / llama.
   - モード別プロンプト（各モード固有の指示）
   - デフォルトにリセット機能
   - localStorageで永続化
+- **LLM接続設定の永続化**: 接続URL・プロバイダー・モデル名をlocalStorageに保存
+  - ブラウザをリロードしても設定が保持されます
+  - URLの前後の空白は自動的に除去されます
 
 ## セットアップ
 
@@ -102,9 +105,10 @@ docker compose down
 
 ## 使い方
 
-1. **LLM設定**（画面上部の「LLM設定」）
+1. **LLM設定**（画面上部の歯車アイコン →「LLM設定」タブ）
    - Provider（LM Studio / Ollama / llama.cpp）を選択
    - 接続URLとモデル名を確認・変更
+   - 設定は自動的にlocalStorageに保存され、次回アクセス時も維持されます
 
 2. **モードを選択**（画面左側）
    - やさしく説明：概念や用語の説明
