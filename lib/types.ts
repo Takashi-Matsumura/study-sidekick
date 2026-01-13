@@ -68,20 +68,20 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     provider: 'lm-studio',
     name: 'LM Studio',
-    baseUrl: 'http://localhost:1234/v1',
+    baseUrl: 'http://host.docker.internal:1234/v1',
     defaultModel: 'local-model',
   },
   {
     provider: 'ollama',
     name: 'Ollama',
-    baseUrl: 'http://localhost:11434/v1',
+    baseUrl: 'http://host.docker.internal:11434/v1',
     defaultModel: 'llama3.2',
   },
   {
     provider: 'llama-cpp',
     name: 'llama.cpp',
-    baseUrl: 'http://localhost:8080/v1',
-    defaultModel: 'default',
+    baseUrl: 'http://host.docker.internal:8080/v1',
+    defaultModel: 'gemma3',
   },
 ];
 
