@@ -1,17 +1,53 @@
 services:
+  # AI RAG Backend (ChromaDB + sentence-transformers)
+  airag-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    container_name: study-sidekick-rag
+    restart: unless-stopped
+    environment:
+      - CHROMA_PERSIST_DIR=/app/chroma_data
+      - EMBEDDING_MODEL=intfloat/multilingual-e5-small
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:8080}
+      - CHUNK_SIZE=500
+      - CHUNK_OVERLAP=50
+      - RAG_TOP_K=5
+      - RAG_SIMILARITY_THRESHOLD=0.3
+    volumes:
+      - chroma_data:/app/chroma_data
+      - model_cache:/app/model_cache
+    ports:
+      - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # Study Sidekick Frontend
   study-sidekick:
     build:
       context: .
       dockerfile: Dockerfile
+    platform: linux/amd64
     container_name: study-sidekick
     ports:
       - "8585:8585"
     environment:
       - NODE_ENV=production
       - PORT=8585
-      # RAGサーバーのURL（ホストマシンで動作している場合）
-      - RAG_BASE_URL=http://host.docker.internal:8000
+      # RAGサーバーのURL（同じcomposeネットワーク内）
+      - RAG_BASE_URL=http://airag-backend:8000
     restart: unless-stopped
-    # ホストマシンのサービスにアクセスするため
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      airag-backend:
+        condition: service_healthy
+
+volumes:
+  chroma_data:
+  model_cache:
