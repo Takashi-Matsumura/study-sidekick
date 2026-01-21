@@ -56,6 +56,10 @@ export function Settings({
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // LLM接続テスト state
+  const [connectionTesting, setConnectionTesting] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const handleProviderChange = (provider: LLMProviderType) => {
     const preset = PROVIDER_PRESETS.find((p) => p.provider === provider);
     if (preset) {
@@ -64,6 +68,47 @@ export function Settings({
         baseUrl: preset.baseUrl,
         model: preset.defaultModel,
       });
+    }
+    // Provider変更時にテスト結果をクリア
+    setConnectionResult(null);
+  };
+
+  // LLM接続テスト
+  const handleConnectionTest = async () => {
+    setConnectionTesting(true);
+    setConnectionResult(null);
+
+    try {
+      const response = await fetch(`${config.baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const models = data.data || data.models || [];
+      const modelCount = models.length;
+      const modelNames = models.slice(0, 3).map((m: { id?: string; name?: string; model?: string }) =>
+        m.id || m.name || m.model || 'unknown'
+      ).join(', ');
+
+      setConnectionResult({
+        type: 'success',
+        text: `接続成功！${modelCount}個のモデルを検出${modelNames ? `: ${modelNames}` : ''}`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '不明なエラー';
+      setConnectionResult({
+        type: 'error',
+        text: `接続失敗: ${message}`,
+      });
+    } finally {
+      setConnectionTesting(false);
     }
   };
 
@@ -294,6 +339,40 @@ export function Settings({
                   className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="local-model"
                 />
+              </div>
+
+              {/* 接続テスト */}
+              <div>
+                <button
+                  onClick={handleConnectionTest}
+                  disabled={connectionTesting || !config.baseUrl}
+                  className="w-full py-2 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 text-zinc-700 dark:text-zinc-300 font-medium rounded-md transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {connectionTesting ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      テスト中...
+                    </>
+                  ) : (
+                    '接続テスト'
+                  )}
+                </button>
+
+                {connectionResult && (
+                  <div
+                    className={`mt-2 p-3 rounded-md text-sm ${
+                      connectionResult.type === 'success'
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    {connectionResult.type === 'success' ? '✓ ' : '✗ '}
+                    {connectionResult.text}
+                  </div>
+                )}
               </div>
 
               {/* ヒント */}
