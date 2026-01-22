@@ -85,6 +85,15 @@ export function DatabaseIcon({ className = "w-5 h-5" }: IconProps) {
   );
 }
 
+export function BraveIcon({ className = "w-5 h-5" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5zm0 2.18l7 3.89v5.43c0 4.5-3.08 8.71-7 9.93-3.92-1.22-7-5.43-7-9.93V8.07l7-3.89z"/>
+      <path d="M12 6l-5 2.78v4.44c0 3.33 2.13 6.44 5 7.53 2.87-1.09 5-4.2 5-7.53V8.78L12 6z"/>
+    </svg>
+  );
+}
+
 export function ModeIcon({ icon }: { icon: string }) {
   switch (icon) {
     case 'book':

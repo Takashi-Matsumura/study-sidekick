@@ -24,3 +24,42 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* モード選択のレスポンシブ対応 */
+.mode-selector-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-description {
+  display: block;
+}
+
+/* 画面高さが小さい場合：2列グリッド表示 & 説明文非表示 */
+@media (max-height: 700px) {
+  .mode-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.375rem;
+  }
+
+  .mode-selector-grid button {
+    padding: 0.5rem;
+  }
+
+  .mode-description {
+    display: none;
+  }
+}
+
+/* 画面高さがさらに小さい場合 */
+@media (max-height: 550px) {
+  .mode-selector-grid {
+    gap: 0.25rem;
+  }
+
+  .mode-selector-grid button {
+    padding: 0.375rem 0.5rem;
+  }
+}

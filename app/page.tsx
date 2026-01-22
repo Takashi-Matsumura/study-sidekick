@@ -6,11 +6,12 @@ import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
 import { MetricsDisplay } from '@/components/MetricsDisplay';
 import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts } from '@/lib/types';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts, SearchConfig, DEFAULT_SEARCH_CONFIG } from '@/lib/types';
 import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 
 const SYSTEM_PROMPTS_STORAGE_KEY = 'study-sidekick-system-prompts';
 const LLM_CONFIG_STORAGE_KEY = 'study-sidekick-llm-config';
+const SEARCH_CONFIG_STORAGE_KEY = 'study-sidekick-search-config';
 
 // トークン数推定（日本語混在テキスト用）
 // 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
@@ -42,6 +43,7 @@ export default function Home() {
   const [ragEnabled, setRagEnabled] = useState(false);
   const [ragCategory, setRagCategory] = useState('study');
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>(DEFAULT_SYSTEM_PROMPTS);
+  const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -79,6 +81,22 @@ export default function Home() {
     }
   }, []);
 
+  // localStorageから検索設定を読み込み
+  useEffect(() => {
+    const saved = localStorage.getItem(SEARCH_CONFIG_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSearchConfig({
+          ...DEFAULT_SEARCH_CONFIG,
+          ...parsed,
+        });
+      } catch {
+        // 無効なJSONの場合はデフォルトを使用
+      }
+    }
+  }, []);
+
   // LLM設定が変更されたらlocalStorageに保存
   const handleLlmConfigChange = useCallback((config: LLMConfig) => {
     // URLの前後の空白を除去
@@ -94,6 +112,12 @@ export default function Home() {
   const handleSystemPromptsChange = useCallback((prompts: SystemPrompts) => {
     setSystemPrompts(prompts);
     localStorage.setItem(SYSTEM_PROMPTS_STORAGE_KEY, JSON.stringify(prompts));
+  }, []);
+
+  // 検索設定が変更されたらlocalStorageに保存
+  const handleSearchConfigChange = useCallback((config: SearchConfig) => {
+    setSearchConfig(config);
+    localStorage.setItem(SEARCH_CONFIG_STORAGE_KEY, JSON.stringify(config));
   }, []);
   const [streamingContent, setStreamingContent] = useState('');
   const [metrics, setMetrics] = useState<GenerationMetrics>({
@@ -173,7 +197,12 @@ export default function Home() {
         const searchResponse = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: message, numResults: 3, fetchContent: true }),
+          body: JSON.stringify({
+            query: message,
+            numResults: 3,
+            fetchContent: true,
+            searchConfig,
+          }),
           signal,
         });
 
@@ -350,7 +379,7 @@ export default function Home() {
 
       focusInput();
     }
-  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled, systemPrompts]);
+  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled, systemPrompts, searchConfig]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -406,6 +435,7 @@ export default function Home() {
               isLoading={isLoading}
               onCancel={handleCancel}
               ragEnabled={ragEnabled}
+              searchConfig={searchConfig}
             />
           </div>
 
@@ -443,6 +473,8 @@ export default function Home() {
         onRagCategoryChange={setRagCategory}
         systemPrompts={systemPrompts}
         onSystemPromptsChange={handleSystemPromptsChange}
+        searchConfig={searchConfig}
+        onSearchConfigChange={handleSearchConfigChange}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />

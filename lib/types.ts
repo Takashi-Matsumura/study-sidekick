@@ -86,6 +86,18 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
 ];
 
 // Search Types
+export type SearchProviderType = 'brave' | 'duckduckgo';
+
+export interface SearchConfig {
+  provider: SearchProviderType;
+  braveApiKey?: string;  // Brave Search API キー（オプション）
+}
+
+export const DEFAULT_SEARCH_CONFIG: SearchConfig = {
+  provider: 'duckduckgo',
+  braveApiKey: '',
+};
+
 export interface SearchResult {
   title: string;
   url: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { LLMConfig, PROVIDER_PRESETS, LLMProviderType, SystemPrompts } from '@/lib/types';
+import { LLMConfig, PROVIDER_PRESETS, LLMProviderType, SystemPrompts, SearchConfig, SearchProviderType } from '@/lib/types';
 import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 import { SettingsIcon, InfoIcon, DatabaseIcon } from './Icons';
 
@@ -20,6 +20,8 @@ interface SettingsProps {
   onRagCategoryChange: (category: string) => void;
   systemPrompts: SystemPrompts;
   onSystemPromptsChange: (prompts: SystemPrompts) => void;
+  searchConfig: SearchConfig;
+  onSearchConfigChange: (config: SearchConfig) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -37,6 +39,8 @@ export function Settings({
   onRagCategoryChange,
   systemPrompts,
   onSystemPromptsChange,
+  searchConfig,
+  onSearchConfigChange,
   isOpen,
   onClose,
 }: SettingsProps) {
@@ -288,7 +292,11 @@ export function Settings({
         </div>
 
         {/* タブコンテンツ */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className={`flex-1 p-4 ${
+          activeTab === 'rag' && ragSubTab === 'upload'
+            ? 'flex flex-col overflow-hidden'
+            : 'overflow-y-auto'
+        }`}>
           {activeTab === 'llm' && (
             <div className="space-y-4">
               {/* Provider選択 */}
@@ -388,6 +396,85 @@ export function Settings({
                     </ul>
                   </div>
                 </div>
+              </div>
+
+              {/* 検索API設定 */}
+              <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-4">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                  Web検索API（「検索して要約」モード用）
+                </h3>
+
+                {/* Provider選択 */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                    検索プロバイダー
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onSearchConfigChange({ ...searchConfig, provider: 'brave' })}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        searchConfig.provider === 'brave'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      Brave Search
+                    </button>
+                    <button
+                      onClick={() => onSearchConfigChange({ ...searchConfig, provider: 'duckduckgo' })}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        searchConfig.provider === 'duckduckgo'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      DuckDuckGo
+                    </button>
+                  </div>
+                </div>
+
+                {/* Brave API Key */}
+                {searchConfig.provider === 'brave' && (
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                      Brave Search API キー
+                    </label>
+                    <input
+                      type="password"
+                      value={searchConfig.braveApiKey || ''}
+                      onChange={(e) => onSearchConfigChange({ ...searchConfig, braveApiKey: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="BSA-xxxxxxxxxxxxxxxxxx"
+                    />
+                    <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                      <a
+                        href="https://brave.com/search/api/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                      >
+                        Brave Search API
+                      </a>
+                      {' '}で無料取得（月2,000クエリまで無料）
+                    </p>
+                  </div>
+                )}
+
+                {/* DuckDuckGo説明 */}
+                {searchConfig.provider === 'duckduckgo' && (
+                  <div className="text-xs text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-800 p-3 rounded">
+                    <div className="flex items-start gap-2">
+                      <InfoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium mb-1">DuckDuckGo（非公式）</p>
+                        <p>
+                          APIキー不要ですが、レート制限やパース失敗でエラーになることがあります。
+                          安定性を求める場合はBrave Search APIをお勧めします。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -648,64 +735,60 @@ export function Settings({
 
               {/* ナレッジ登録 */}
               {ragSubTab === 'upload' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                      ドキュメント名
-                    </label>
-                    <input
-                      type="text"
-                      value={uploadFilename}
-                      onChange={(e) => setUploadFilename(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="例: 会社規定.md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                      カテゴリ
-                    </label>
-                    <input
-                      type="text"
-                      value={uploadCategory}
-                      onChange={(e) => setUploadCategory(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="例: general, evaluation"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                      内容
-                    </label>
-                    <textarea
-                      value={uploadContent}
-                      onChange={(e) => setUploadContent(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 h-48 resize-none font-mono"
-                      placeholder="ナレッジの内容をここに入力..."
-                    />
-                  </div>
-
-                  {uploadMessage && (
-                    <div
-                      className={`p-3 rounded-md text-sm ${
-                        uploadMessage.type === 'success'
-                          ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                          : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
-                      }`}
-                    >
-                      {uploadMessage.text}
+                <div className="flex flex-col h-full">
+                  {/* スクロール可能なフォーム部分 */}
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                        ドキュメント名
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadFilename}
+                        onChange={(e) => setUploadFilename(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例: 会社規定.md"
+                      />
                     </div>
-                  )}
 
-                  <button
-                    onClick={handleUpload}
-                    disabled={uploading || !uploadFilename.trim() || !uploadContent.trim()}
-                    className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium rounded-md transition-colors disabled:cursor-not-allowed"
-                  >
-                    {uploading ? '登録中...' : 'ナレッジを登録'}
-                  </button>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                        カテゴリ
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadCategory}
+                        onChange={(e) => setUploadCategory(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="例: general, evaluation"
+                      />
+                    </div>
+
+                    <div className="flex flex-col flex-1 min-h-0">
+                      <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                        内容
+                      </label>
+                      <textarea
+                        value={uploadContent}
+                        onChange={(e) => setUploadContent(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-h-[120px] resize-none font-mono"
+                        placeholder="ナレッジの内容をここに入力..."
+                      />
+                    </div>
+
+                    {/* メッセージ表示 */}
+                    {uploadMessage && (
+                      <div
+                        className={`p-3 rounded-md text-sm ${
+                          uploadMessage.type === 'success'
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                        }`}
+                      >
+                        {uploadMessage.text}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -713,13 +796,31 @@ export function Settings({
         </div>
 
         {/* フッター */}
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-700 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
-          >
-            完了
-          </button>
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-700 flex justify-end gap-3">
+          {activeTab === 'rag' && ragSubTab === 'upload' ? (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-sm font-medium rounded-md transition-colors"
+              >
+                閉じる
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={uploading || !uploadFilename.trim() || !uploadContent.trim()}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white text-sm font-medium rounded-md transition-colors disabled:cursor-not-allowed"
+              >
+                {uploading ? '登録中...' : 'ナレッジを登録'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
+            >
+              完了
+            </button>
+          )}
         </div>
       </div>
     </div>

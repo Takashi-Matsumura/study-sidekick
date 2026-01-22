@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSearchProvider, fetchPageContent } from '@/lib/search/provider';
+import { SearchConfig, DEFAULT_SEARCH_CONFIG } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, numResults = 5, fetchContent = false } = body;
+    const { query, numResults = 5, fetchContent = false, searchConfig } = body;
 
     if (!query) {
       return NextResponse.json(
@@ -13,7 +14,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const searchProvider = createSearchProvider();
+    // searchConfigをマージ（未指定の場合はデフォルト値を使用）
+    const config: SearchConfig = {
+      ...DEFAULT_SEARCH_CONFIG,
+      ...searchConfig,
+    };
+
+    const searchProvider = createSearchProvider(config);
     const response = await searchProvider.search(query, numResults);
 
     if (response.error) {

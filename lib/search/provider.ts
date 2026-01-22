@@ -1,11 +1,99 @@
-import { SearchResult, SearchResponse } from '../types';
+import { SearchResult, SearchResponse, SearchConfig } from '../types';
 
 export interface SearchProvider {
   search(query: string, numResults?: number): Promise<SearchResponse>;
 }
 
-export function createSearchProvider(): SearchProvider {
+/**
+ * 検索プロバイダーを作成
+ * SearchConfigに基づいてプロバイダーを選択
+ * Brave選択時にAPIキーがなければDuckDuckGoにフォールバック
+ */
+export function createSearchProvider(config: SearchConfig): SearchProvider {
+  if (config.provider === 'brave' && config.braveApiKey) {
+    return new BraveSearchProvider(config.braveApiKey);
+  }
+
+  if (config.provider === 'brave' && !config.braveApiKey) {
+    console.log('[Search] Brave selected but no API key, falling back to DuckDuckGo');
+  }
+
   return new DuckDuckGoProvider();
+}
+
+/**
+ * Brave Search API プロバイダー
+ * https://brave.com/search/api/
+ * 無料プラン: 月2,000クエリまで
+ */
+class BraveSearchProvider implements SearchProvider {
+  private apiKey: string;
+  private baseUrl = 'https://api.search.brave.com/res/v1/web/search';
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async search(query: string, numResults: number = 5): Promise<SearchResponse> {
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        count: numResults.toString(),
+        safesearch: 'moderate',
+        search_lang: 'ja',
+        ui_lang: 'ja-JP',
+      });
+
+      const response = await fetch(`${this.baseUrl}?${params}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip',
+          'X-Subscription-Token': this.apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        // レート制限の場合はフォールバック
+        if (response.status === 429) {
+          console.log('[Brave Search] Rate limited, falling back to DuckDuckGo');
+          const fallback = new DuckDuckGoProvider();
+          return fallback.search(query, numResults);
+        }
+        throw new Error(`Brave Search API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const results: SearchResult[] = [];
+
+      if (data.web?.results) {
+        for (const item of data.web.results.slice(0, numResults)) {
+          results.push({
+            title: item.title || '',
+            url: item.url || '',
+            snippet: item.description || '',
+          });
+        }
+      }
+
+      return { results };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Brave Search] Error:', message);
+
+      // エラー時はDuckDuckGoにフォールバック
+      console.log('[Brave Search] Falling back to DuckDuckGo');
+      try {
+        const fallback = new DuckDuckGoProvider();
+        return fallback.search(query, numResults);
+      } catch {
+        return {
+          results: [],
+          error: `検索エラー: ${message}`,
+        };
+      }
+    }
+  }
 }
 
 class DuckDuckGoProvider implements SearchProvider {

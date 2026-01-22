@@ -138,35 +138,46 @@ RAGサーバーも同様に`http://host.docker.internal:8000`で接続できま�
 - **フロントエンド**: Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - **バックエンド**: Next.js Route Handlers
 - **LLM接続**: OpenAI互換API
-- **Web検索**: DuckDuckGo HTML API（APIキー不要）
+- **Web検索**: Brave Search API（推奨） / DuckDuckGo HTML（フォールバック）
 
 ## Web検索サービスについて
 
-「検索して要約」モードでは、**DuckDuckGo**のHTML版を使用してWeb検索を実現しています。
+「検索して要約」モードでは、**Brave Search API**（推奨）または**DuckDuckGo**のHTML版を使用してWeb検索を実現しています。
+
+### 検索プロバイダーの設定
+
+アプリ環境設定 → LLM設定 → 「Web検索API」セクションで検索プロバイダーを選択できます。
+
+| プロバイダー | APIキー | 安定性 | 特徴 |
+|-------------|---------|--------|------|
+| **Brave Search**（推奨） | 必要 | 高 | 公式API、月2,000クエリ無料 |
+| **DuckDuckGo** | 不要 | 中 | 非公式、レート制限あり |
+
+Brave Search APIを使用する場合、モード選択の「検索して要約」アイコンがオレンジ色で表示されます。
+
+### Brave Search API の設定
+
+1. [Brave Search API](https://brave.com/search/api/) でアカウント作成（無料）
+2. APIキーを発行
+3. アプリ環境設定 → LLM設定 → Web検索API で「Brave Search」を選択
+4. APIキーを入力
 
 ### 仕組み
 
+**Brave Search API使用時:**
+```
+ユーザー入力 → Brave Search API → JSON検索結果 → LLMで要約
+```
+
+**DuckDuckGo使用時（フォールバック）:**
 ```
 ユーザー入力 → DuckDuckGo HTML版へリクエスト → HTMLをパース → 検索結果を抽出 → LLMで要約
 ```
 
-- **エンドポイント**: `https://html.duckduckgo.com/html/?q=検索クエリ`
-- **方式**: HTML版ページをfetchし、正規表現で検索結果（タイトル、URL、スニペット）を抽出
-- **本文取得**: 各URLにアクセスして本文を取得し、LLMに渡すコンテキストを充実させる
-
-### 特徴
-
-| 項目 | 内容 |
-|------|------|
-| 料金 | **無料**（APIキー不要） |
-| プライバシー | DuckDuckGoはユーザー追跡なし |
-| 制限事項 | 大量リクエストはレート制限される可能性あり |
-| 注意点 | 公式APIではないため、HTMLの構造変更で動作しなくなる可能性あり |
-
 ### 処理フロー
 
 1. ユーザーが検索クエリを入力
-2. `/api/search`がDuckDuckGo HTML版にリクエスト
+2. `/api/search`が設定されたプロバイダーにリクエスト
 3. 検索結果（最大3件）を抽出し、各URLの本文も取得
 4. 検索結果をプロンプトに埋め込み、LLMに送信
 5. LLMが検索結果を要約して回答を生成
