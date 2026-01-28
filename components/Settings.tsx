@@ -65,13 +65,15 @@ export function Settings({
   // LLM接続テスト state
   const [connectionTesting, setConnectionTesting] = useState(false);
   const [connectionResult, setConnectionResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   const handleProviderChange = (provider: LLMProviderType) => {
     // 保存済みの設定を取得（なければプリセットを使用）
     const newConfig = getProviderConfig(provider);
     onChange(newConfig);
-    // Provider変更時にテスト結果をクリア
+    // Provider変更時にテスト結果とモデルリストをクリア
     setConnectionResult(null);
+    setAvailableModels([]);
   };
 
   // LLM接続テスト
@@ -103,6 +105,11 @@ export function Settings({
       // コンテキストサイズが取得できた場合は設定を更新
       if (data.contextSize && data.contextSize !== config.contextSize) {
         onChange({ ...config, contextSize: data.contextSize });
+      }
+
+      // Ollamaの場合はモデルリストを保存（全モデルリストを使用）
+      if (config.provider === 'ollama' && data.allModelNames && data.allModelNames.length > 0) {
+        setAvailableModels(data.allModelNames);
       }
 
       const modelNames = data.modelNames?.join(', ') || '';
@@ -346,13 +353,35 @@ export function Settings({
                 <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
                   モデル名
                 </label>
-                <input
-                  type="text"
-                  value={config.model}
-                  onChange={(e) => onChange({ ...config, model: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="local-model"
-                />
+                {config.provider === 'ollama' && availableModels.length > 0 ? (
+                  <div className="space-y-2">
+                    <select
+                      value={config.model}
+                      onChange={(e) => onChange({ ...config, model: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {!availableModels.includes(config.model) && config.model && (
+                        <option value={config.model}>{config.model}</option>
+                      )}
+                      {availableModels.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      {availableModels.length}個のモデルが利用可能
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={config.model}
+                    onChange={(e) => onChange({ ...config, model: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="local-model"
+                  />
+                )}
               </div>
 
               {/* API Key */}

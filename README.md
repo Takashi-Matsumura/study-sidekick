@@ -128,6 +128,7 @@ RAGサーバーも同様に`http://host.docker.internal:8000`で接続できま�
    - Provider（LM Studio / Ollama / llama.cpp）を選択
    - 接続URLとモデル名を確認・変更
    - APIキー（オプション）：認証が必要なLLMサーバーの場合に入力
+   - **Ollamaモデル選択**: 接続テスト成功後、ドロップダウンからモデルを選択可能
    - 設定は自動的にlocalStorageに保存され、次回アクセス時も維持されます
 
 2. **モードを選択**（画面左側）

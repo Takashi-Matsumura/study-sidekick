@@ -101,11 +101,13 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const models = data.data || data.models || [];
     const modelCount = models.length;
-    const modelNames = models
-      .slice(0, 3)
+    // 全モデル名を取得
+    const allModelNames = models
       .map((m: { id?: string; name?: string; model?: string }) =>
         m.id || m.name || m.model || 'unknown'
       );
+    // 表示用に最初の3つ
+    const modelNames = allModelNames.slice(0, 3);
 
     // コンテキストサイズを取得（プロバイダごとに異なる方法を試す）
     let contextSize: number | null = null;
@@ -127,6 +129,7 @@ export async function POST(request: NextRequest) {
       success: true,
       modelCount,
       modelNames,
+      allModelNames,  // 全モデルリスト（Ollamaのドロップダウン用）
       contextSize,  // nullの場合はデフォルト値を使用
     });
   } catch (error) {
