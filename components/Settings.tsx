@@ -71,6 +71,7 @@ export function Settings({
         provider,
         baseUrl: preset.baseUrl,
         model: preset.defaultModel,
+        apiKey: config.apiKey,  // APIキーは保持
       });
     }
     // Provider変更時にテスト結果をクリア
@@ -83,11 +84,15 @@ export function Settings({
     setConnectionResult(null);
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
       const response = await fetch(`${config.baseUrl}/models`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -347,6 +352,23 @@ export function Settings({
                   className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="local-model"
                 />
+              </div>
+
+              {/* API Key */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  APIキー（オプション）
+                </label>
+                <input
+                  type="password"
+                  value={config.apiKey || ''}
+                  onChange={(e) => onChange({ ...config, apiKey: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="認証が必要な場合のみ入力"
+                />
+                <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  認証が必要なLLMサーバーの場合にAPIキーを入力してください
+                </p>
               </div>
 
               {/* 接続テスト */}

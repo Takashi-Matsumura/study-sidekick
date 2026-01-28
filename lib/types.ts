@@ -5,6 +5,7 @@ export interface LLMConfig {
   provider: LLMProviderType;
   baseUrl: string;
   model: string;
+  apiKey?: string;  // LLM API キー（オプション）
 }
 
 export interface LLMGenerateOptions {

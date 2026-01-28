@@ -16,13 +16,21 @@ class OpenAICompatibleProvider implements LLMProvider {
     this.config = config;
   }
 
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.config.apiKey) {
+      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+    }
+    return headers;
+  }
+
   async generate(prompt: string, options?: LLMGenerateOptions): Promise<LLMResponse> {
     try {
       const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.config.model,
           messages: [
@@ -77,9 +85,7 @@ class OpenAICompatibleProvider implements LLMProvider {
 
       const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           model: this.config.model,
           messages,
