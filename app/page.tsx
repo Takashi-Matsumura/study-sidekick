@@ -6,12 +6,13 @@ import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
 import { MetricsDisplay } from '@/components/MetricsDisplay';
 import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts, SearchConfig, DEFAULT_SEARCH_CONFIG } from '@/lib/types';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts, SearchConfig, DEFAULT_SEARCH_CONFIG, AllProviderSettings, LLMProviderType } from '@/lib/types';
 import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 
 const SYSTEM_PROMPTS_STORAGE_KEY = 'study-sidekick-system-prompts';
 const LLM_CONFIG_STORAGE_KEY = 'study-sidekick-llm-config';
 const SEARCH_CONFIG_STORAGE_KEY = 'study-sidekick-search-config';
+const PROVIDER_SETTINGS_STORAGE_KEY = 'study-sidekick-provider-settings';
 
 // トークン数推定（日本語混在テキスト用）
 // 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
@@ -44,11 +45,24 @@ export default function Home() {
   const [ragCategory, setRagCategory] = useState('study');
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>(DEFAULT_SYSTEM_PROMPTS);
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
+  const [providerSettings, setProviderSettings] = useState<AllProviderSettings>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // localStorageからLLM設定を読み込み
+  // localStorageからプロバイダー設定とLLM設定を読み込み
   useEffect(() => {
+    // プロバイダーごとの設定を読み込み
+    const savedProviderSettings = localStorage.getItem(PROVIDER_SETTINGS_STORAGE_KEY);
+    if (savedProviderSettings) {
+      try {
+        const parsed = JSON.parse(savedProviderSettings);
+        setProviderSettings(parsed);
+      } catch {
+        // 無効なJSONの場合は空のオブジェクトを使用
+      }
+    }
+
+    // 現在のLLM設定を読み込み
     const savedLlmConfig = localStorage.getItem(LLM_CONFIG_STORAGE_KEY);
     if (savedLlmConfig) {
       try {
@@ -98,7 +112,7 @@ export default function Home() {
   }, []);
 
   // LLM設定が変更されたらlocalStorageに保存
-  const handleLlmConfigChange = useCallback((config: LLMConfig) => {
+  const handleLlmConfigChange = useCallback((config: LLMConfig, previousProvider?: LLMProviderType) => {
     // URLの前後の空白を除去
     const cleanedConfig = {
       ...config,
@@ -106,7 +120,51 @@ export default function Home() {
     };
     setLlmConfig(cleanedConfig);
     localStorage.setItem(LLM_CONFIG_STORAGE_KEY, JSON.stringify(cleanedConfig));
+
+    // プロバイダーごとの設定を保存
+    setProviderSettings(prev => {
+      const newSettings = {
+        ...prev,
+        [cleanedConfig.provider]: {
+          baseUrl: cleanedConfig.baseUrl,
+          model: cleanedConfig.model,
+          apiKey: cleanedConfig.apiKey,
+        },
+      };
+      localStorage.setItem(PROVIDER_SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
+      return newSettings;
+    });
   }, []);
+
+  // プロバイダー切り替え時に保存済み設定を取得
+  const getProviderConfig = useCallback((provider: LLMProviderType): LLMConfig => {
+    const savedSettings = providerSettings[provider];
+    const preset = PROVIDER_PRESETS.find(p => p.provider === provider);
+
+    if (savedSettings) {
+      // 保存済み設定がある場合はそれを使用
+      return {
+        provider,
+        baseUrl: savedSettings.baseUrl,
+        model: savedSettings.model,
+        apiKey: savedSettings.apiKey,
+      };
+    } else if (preset) {
+      // プリセットを使用
+      return {
+        provider,
+        baseUrl: preset.baseUrl,
+        model: preset.defaultModel,
+      };
+    }
+
+    // フォールバック
+    return {
+      provider,
+      baseUrl: '',
+      model: '',
+    };
+  }, [providerSettings]);
 
   // システムプロンプトが変更されたらlocalStorageに保存
   const handleSystemPromptsChange = useCallback((prompts: SystemPrompts) => {
@@ -467,6 +525,7 @@ export default function Home() {
       <Settings
         config={llmConfig}
         onChange={handleLlmConfigChange}
+        getProviderConfig={getProviderConfig}
         ragEnabled={ragEnabled}
         onRagEnabledChange={setRagEnabled}
         ragCategory={ragCategory}

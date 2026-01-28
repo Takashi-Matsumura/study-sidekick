@@ -14,6 +14,7 @@ interface RAGDocument {
 interface SettingsProps {
   config: LLMConfig;
   onChange: (config: LLMConfig) => void;
+  getProviderConfig: (provider: LLMProviderType) => LLMConfig;
   ragEnabled: boolean;
   onRagEnabledChange: (enabled: boolean) => void;
   ragCategory: string;
@@ -33,6 +34,7 @@ type PromptTab = 'common' | 'explain' | 'idea' | 'search' | 'rag';
 export function Settings({
   config,
   onChange,
+  getProviderConfig,
   ragEnabled,
   onRagEnabledChange,
   ragCategory,
@@ -65,15 +67,9 @@ export function Settings({
   const [connectionResult, setConnectionResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleProviderChange = (provider: LLMProviderType) => {
-    const preset = PROVIDER_PRESETS.find((p) => p.provider === provider);
-    if (preset) {
-      onChange({
-        provider,
-        baseUrl: preset.baseUrl,
-        model: preset.defaultModel,
-        apiKey: config.apiKey,  // APIキーは保持
-      });
-    }
+    // 保存済みの設定を取得（なければプリセットを使用）
+    const newConfig = getProviderConfig(provider);
+    onChange(newConfig);
     // Provider変更時にテスト結果をクリア
     setConnectionResult(null);
   };
@@ -84,31 +80,28 @@ export function Settings({
     setConnectionResult(null);
 
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (config.apiKey) {
-        headers['Authorization'] = `Bearer ${config.apiKey}`;
-      }
-      const response = await fetch(`${config.baseUrl}/models`, {
-        method: 'GET',
-        headers,
+      // サーバーサイドAPI経由で接続テスト（CORS回避）
+      const response = await fetch('/api/llm/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `HTTP ${response.status}`);
       }
 
-      const data = await response.json();
-      const models = data.data || data.models || [];
-      const modelCount = models.length;
-      const modelNames = models.slice(0, 3).map((m: { id?: string; name?: string; model?: string }) =>
-        m.id || m.name || m.model || 'unknown'
-      ).join(', ');
-
+      const modelNames = data.modelNames?.join(', ') || '';
       setConnectionResult({
         type: 'success',
-        text: `接続成功！${modelCount}個のモデルを検出${modelNames ? `: ${modelNames}` : ''}`,
+        text: `接続成功！${data.modelCount}個のモデルを検出${modelNames ? `: ${modelNames}` : ''}`,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : '不明なエラー';

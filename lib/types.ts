@@ -65,6 +65,18 @@ export interface ProviderPreset {
   defaultModel: string;
 }
 
+// プロバイダーごとの保存設定
+export interface ProviderSettings {
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+}
+
+// 全プロバイダーの設定を保存する型
+export type AllProviderSettings = {
+  [key in LLMProviderType]?: ProviderSettings;
+};
+
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     provider: 'lm-studio',
