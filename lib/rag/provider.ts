@@ -1,11 +1,14 @@
-import { RAGQueryResponse } from '../types';
+import { RAGQueryResponse, DEFAULT_RAG_CONFIG } from '../types';
 
-const RAG_BASE_URL = process.env.RAG_BASE_URL || 'http://localhost:8000';
+const getBaseUrl = (customUrl?: string) => {
+  return customUrl || process.env.RAG_BASE_URL || DEFAULT_RAG_CONFIG.baseUrl;
+};
 
 export interface RAGQueryOptions {
   topK?: number;
   threshold?: number;
   category?: string;
+  baseUrl?: string;
 }
 
 export interface RAGDocument {
@@ -27,8 +30,9 @@ export async function queryRAG(
   query: string,
   options?: RAGQueryOptions
 ): Promise<RAGQueryResponse> {
+  const baseUrl = getBaseUrl(options?.baseUrl);
   try {
-    const response = await fetch(`${RAG_BASE_URL}/api/rag/query`, {
+    const response = await fetch(`${baseUrl}/api/rag/query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,9 +58,10 @@ export async function queryRAG(
   }
 }
 
-export async function checkRAGHealth(): Promise<boolean> {
+export async function checkRAGHealth(baseUrl?: string): Promise<boolean> {
+  const url = getBaseUrl(baseUrl);
   try {
-    const response = await fetch(`${RAG_BASE_URL}/health`, {
+    const response = await fetch(`${url}/health`, {
       method: 'GET',
     });
     return response.ok;
@@ -65,13 +70,14 @@ export async function checkRAGHealth(): Promise<boolean> {
   }
 }
 
-export async function getRAGStats(): Promise<{
+export async function getRAGStats(baseUrl?: string): Promise<{
   total_chunks: number;
   unique_documents: number;
   embedding_model: string;
 } | null> {
+  const url = getBaseUrl(baseUrl);
   try {
-    const response = await fetch(`${RAG_BASE_URL}/api/rag/stats`, {
+    const response = await fetch(`${url}/api/rag/stats`, {
       method: 'GET',
     });
     if (!response.ok) return null;
@@ -81,11 +87,12 @@ export async function getRAGStats(): Promise<{
   }
 }
 
-export async function listRAGDocuments(category?: string): Promise<RAGDocument[]> {
+export async function listRAGDocuments(category?: string, baseUrl?: string): Promise<RAGDocument[]> {
+  const ragBaseUrl = getBaseUrl(baseUrl);
   try {
     const url = category
-      ? `${RAG_BASE_URL}/api/documents/list?category=${encodeURIComponent(category)}`
-      : `${RAG_BASE_URL}/api/documents/list`;
+      ? `${ragBaseUrl}/api/documents/list?category=${encodeURIComponent(category)}`
+      : `${ragBaseUrl}/api/documents/list`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -103,10 +110,11 @@ export async function listRAGDocuments(category?: string): Promise<RAGDocument[]
   }
 }
 
-export async function getRAGDocumentContent(filename: string): Promise<RAGDocumentContent> {
+export async function getRAGDocumentContent(filename: string, baseUrl?: string): Promise<RAGDocumentContent> {
+  const ragBaseUrl = getBaseUrl(baseUrl);
   try {
     const response = await fetch(
-      `${RAG_BASE_URL}/api/documents/content/${encodeURIComponent(filename)}`,
+      `${ragBaseUrl}/api/documents/content/${encodeURIComponent(filename)}`,
       {
         method: 'GET',
       }
@@ -126,10 +134,12 @@ export async function getRAGDocumentContent(filename: string): Promise<RAGDocume
 export async function uploadRAGDocument(
   content: string,
   filename: string,
-  category?: string
+  category?: string,
+  baseUrl?: string
 ): Promise<{ message: string; chunks_created: number }> {
+  const ragBaseUrl = getBaseUrl(baseUrl);
   try {
-    const response = await fetch(`${RAG_BASE_URL}/api/documents`, {
+    const response = await fetch(`${ragBaseUrl}/api/documents`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -155,10 +165,11 @@ export async function uploadRAGDocument(
   }
 }
 
-export async function deleteRAGDocument(filename: string): Promise<void> {
+export async function deleteRAGDocument(filename: string, baseUrl?: string): Promise<void> {
+  const ragBaseUrl = getBaseUrl(baseUrl);
   try {
     const response = await fetch(
-      `${RAG_BASE_URL}/api/documents/${encodeURIComponent(filename)}`,
+      `${ragBaseUrl}/api/documents/${encodeURIComponent(filename)}`,
       {
         method: 'DELETE',
       }

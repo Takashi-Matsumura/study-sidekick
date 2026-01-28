@@ -11,7 +11,9 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    const content = await getRAGDocumentContent(filename);
+    const { searchParams } = new URL(request.url);
+    const ragBaseUrl = searchParams.get('ragBaseUrl') || undefined;
+    const content = await getRAGDocumentContent(filename, ragBaseUrl);
 
     return new Response(JSON.stringify(content), {
       headers: { 'Content-Type': 'application/json' },
@@ -32,7 +34,9 @@ export async function DELETE(
 ) {
   try {
     const { filename } = await params;
-    await deleteRAGDocument(filename);
+    const { searchParams } = new URL(request.url);
+    const ragBaseUrl = searchParams.get('ragBaseUrl') || undefined;
+    await deleteRAGDocument(filename, ragBaseUrl);
 
     return new Response(
       JSON.stringify({ message: 'ドキュメントを削除しました' }),

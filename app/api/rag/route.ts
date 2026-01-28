@@ -4,7 +4,7 @@ import { queryRAG, checkRAGHealth } from '@/lib/rag/provider';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, topK, threshold, category } = body;
+    const { query, topK, threshold, category, ragBaseUrl } = body;
 
     if (!query) {
       return new Response(
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // RAGサーバーのヘルスチェック
-    const isHealthy = await checkRAGHealth();
+    const isHealthy = await checkRAGHealth(ragBaseUrl);
     if (!isHealthy) {
       return new Response(
         JSON.stringify({ error: 'RAGサーバーに接続できません。サーバーが起動しているか確認してください。' }),
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await queryRAG(query, { topK, threshold, category });
+    const result = await queryRAG(query, { topK, threshold, category, baseUrl: ragBaseUrl });
 
     return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' },
@@ -36,9 +36,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const isHealthy = await checkRAGHealth();
+    const { searchParams } = new URL(request.url);
+    const ragBaseUrl = searchParams.get('ragBaseUrl') || undefined;
+
+    const isHealthy = await checkRAGHealth(ragBaseUrl);
     return new Response(
       JSON.stringify({
         status: isHealthy ? 'healthy' : 'unhealthy',

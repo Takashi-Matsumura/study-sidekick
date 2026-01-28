@@ -63,3 +63,13 @@ body {
     padding: 0.375rem 0.5rem;
   }
 }
+
+/* 不確定プログレスバーアニメーション */
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}

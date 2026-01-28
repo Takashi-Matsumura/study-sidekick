@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') || undefined;
 
-    const documents = await listRAGDocuments(category);
+    const ragBaseUrl = searchParams.get('ragBaseUrl') || undefined;
+    const documents = await listRAGDocuments(category, ragBaseUrl);
 
     return new Response(JSON.stringify({ documents }), {
       headers: { 'Content-Type': 'application/json' },
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { content, filename, category } = body;
+    const { content, filename, category, ragBaseUrl } = body;
 
     if (!content || !filename) {
       return new Response(
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await uploadRAGDocument(content, filename, category);
+    const result = await uploadRAGDocument(content, filename, category, ragBaseUrl);
 
     return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' },

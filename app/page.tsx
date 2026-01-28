@@ -6,13 +6,14 @@ import { ChatInput, ChatInputRef } from '@/components/ChatInput';
 import { ChatOutput } from '@/components/ChatOutput';
 import { MetricsDisplay } from '@/components/MetricsDisplay';
 import { GraduationCapIcon, DatabaseIcon } from '@/components/Icons';
-import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts, SearchConfig, DEFAULT_SEARCH_CONFIG, AllProviderSettings, LLMProviderType } from '@/lib/types';
+import { LLMConfig, ChatMode, Message, SearchResult, RAGContext, PROVIDER_PRESETS, GenerationMetrics, SystemPrompts, SearchConfig, DEFAULT_SEARCH_CONFIG, AllProviderSettings, LLMProviderType, RAGConfig, DEFAULT_RAG_CONFIG } from '@/lib/types';
 import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/prompts';
 
 const SYSTEM_PROMPTS_STORAGE_KEY = 'study-sidekick-system-prompts';
 const LLM_CONFIG_STORAGE_KEY = 'study-sidekick-llm-config';
 const SEARCH_CONFIG_STORAGE_KEY = 'study-sidekick-search-config';
 const PROVIDER_SETTINGS_STORAGE_KEY = 'study-sidekick-provider-settings';
+const RAG_CONFIG_STORAGE_KEY = 'study-sidekick-rag-config';
 
 // トークン数推定（日本語混在テキスト用）
 // 日本語: 約1.5文字/トークン、英語: 約4文字/トークン
@@ -42,7 +43,7 @@ export default function Home() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ragEnabled, setRagEnabled] = useState(false);
-  const [ragCategory, setRagCategory] = useState('study');
+  const [ragConfig, setRagConfig] = useState<RAGConfig>(DEFAULT_RAG_CONFIG);
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompts>(DEFAULT_SYSTEM_PROMPTS);
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
   const [providerSettings, setProviderSettings] = useState<AllProviderSettings>({});
@@ -103,6 +104,22 @@ export default function Home() {
         const parsed = JSON.parse(saved);
         setSearchConfig({
           ...DEFAULT_SEARCH_CONFIG,
+          ...parsed,
+        });
+      } catch {
+        // 無効なJSONの場合はデフォルトを使用
+      }
+    }
+  }, []);
+
+  // localStorageからRAG設定を読み込み
+  useEffect(() => {
+    const saved = localStorage.getItem(RAG_CONFIG_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setRagConfig({
+          ...DEFAULT_RAG_CONFIG,
           ...parsed,
         });
       } catch {
@@ -178,6 +195,16 @@ export default function Home() {
   const handleSearchConfigChange = useCallback((config: SearchConfig) => {
     setSearchConfig(config);
     localStorage.setItem(SEARCH_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  }, []);
+
+  // RAG設定が変更されたらlocalStorageに保存
+  const handleRagConfigChange = useCallback((config: RAGConfig) => {
+    const cleanedConfig = {
+      ...config,
+      baseUrl: config.baseUrl.trim(),
+    };
+    setRagConfig(cleanedConfig);
+    localStorage.setItem(RAG_CONFIG_STORAGE_KEY, JSON.stringify(cleanedConfig));
   }, []);
   const [streamingContent, setStreamingContent] = useState('');
   const [metrics, setMetrics] = useState<GenerationMetrics>({
@@ -299,7 +326,8 @@ export default function Home() {
             query: message,
             topK: 5,
             threshold: 0.3,
-            category: ragCategory || undefined,
+            category: ragConfig.category || undefined,
+            ragBaseUrl: ragConfig.baseUrl,
           }),
           signal,
         });
@@ -311,9 +339,9 @@ export default function Home() {
 
         // カテゴリが指定されている場合はフィルタリング
         const allContext = ragData.context || [];
-        if (ragCategory) {
+        if (ragConfig.category) {
           ragContext = allContext.filter(
-            (ctx: RAGContext) => ctx.metadata.category === ragCategory
+            (ctx: RAGContext) => ctx.metadata.category === ragConfig.category
           );
         } else {
           ragContext = allContext;
@@ -449,7 +477,7 @@ export default function Home() {
 
       focusInput();
     }
-  }, [llmConfig, focusInput, messages, ragCategory, ragEnabled, systemPrompts, searchConfig]);
+  }, [llmConfig, focusInput, messages, ragConfig, ragEnabled, systemPrompts, searchConfig]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -540,8 +568,8 @@ export default function Home() {
         getProviderConfig={getProviderConfig}
         ragEnabled={ragEnabled}
         onRagEnabledChange={setRagEnabled}
-        ragCategory={ragCategory}
-        onRagCategoryChange={setRagCategory}
+        ragConfig={ragConfig}
+        onRagConfigChange={handleRagConfigChange}
         systemPrompts={systemPrompts}
         onSystemPromptsChange={handleSystemPromptsChange}
         searchConfig={searchConfig}

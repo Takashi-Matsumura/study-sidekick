@@ -113,6 +113,17 @@ export const DEFAULT_SEARCH_CONFIG: SearchConfig = {
   braveApiKey: '',
 };
 
+// RAG Config Types
+export interface RAGConfig {
+  baseUrl: string;
+  category: string;
+}
+
+export const DEFAULT_RAG_CONFIG: RAGConfig = {
+  baseUrl: 'http://localhost:8000',
+  category: 'study',
+};
+
 export interface SearchResult {
   title: string;
   url: string;

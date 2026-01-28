@@ -123,7 +123,15 @@ class OpenAICompatibleProvider implements LLMProvider {
 
           try {
             const json = JSON.parse(trimmed.slice(6));
-            const content = json.choices?.[0]?.delta?.content;
+            const delta = json.choices?.[0]?.delta;
+            const content = delta?.content;
+            const reasoning = delta?.reasoning;
+
+            // 推論過程があれば出力（折りたたみ表示用のマーカー付き）
+            if (reasoning) {
+              yield `<think>${reasoning}</think>`;
+            }
+
             if (content) {
               yield content;
             }

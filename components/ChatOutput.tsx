@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Message, SearchResult, RAGContext } from '@/lib/types';
 import { GraduationCapIcon, LinkIcon, DatabaseIcon } from './Icons';
 
@@ -128,6 +128,82 @@ export function ChatOutput({ messages, isLoading, streamingContent }: ChatOutput
 }
 
 function MarkdownContent({ content }: { content: string }) {
+  // <think>タグを分離して処理
+  const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+  const parts: Array<{ type: 'think' | 'content'; text: string }> = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = thinkRegex.exec(content)) !== null) {
+    // <think>タグの前のコンテンツ
+    if (match.index > lastIndex) {
+      const beforeText = content.slice(lastIndex, match.index);
+      if (beforeText.trim()) {
+        parts.push({ type: 'content', text: beforeText });
+      }
+    }
+    // <think>タグの中身
+    parts.push({ type: 'think', text: match[1] });
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 残りのコンテンツ
+  if (lastIndex < content.length) {
+    const remaining = content.slice(lastIndex);
+    if (remaining.trim()) {
+      parts.push({ type: 'content', text: remaining });
+    }
+  }
+
+  // パーツがない場合は通常レンダリング
+  if (parts.length === 0) {
+    return <MarkdownLines content={content} />;
+  }
+
+  return (
+    <div className="space-y-2">
+      {parts.map((part, i) => {
+        if (part.type === 'think') {
+          return <ThinkingBlock key={i} content={part.text} />;
+        }
+        return <MarkdownLines key={i} content={part.text} />;
+      })}
+    </div>
+  );
+}
+
+function ThinkingBlock({ content }: { content: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border border-purple-200 dark:border-purple-800 rounded-lg overflow-hidden my-2">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium flex items-center gap-2 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+      >
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span>💭 推論過程</span>
+        <span className="text-xs text-purple-500 dark:text-purple-400">
+          {isOpen ? 'クリックで閉じる' : 'クリックで展開'}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="px-3 py-2 bg-purple-50/50 dark:bg-purple-900/20 text-sm text-purple-800 dark:text-purple-200 whitespace-pre-wrap max-h-96 overflow-y-auto">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarkdownLines({ content }: { content: string }) {
   // 簡易的なMarkdownレンダリング
   const lines = content.split('\n');
 
