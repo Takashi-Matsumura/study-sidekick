@@ -89,6 +89,8 @@ export function Settings({
         body: JSON.stringify({
           baseUrl: config.baseUrl,
           apiKey: config.apiKey,
+          model: config.model,
+          provider: config.provider,
         }),
       });
 
@@ -98,10 +100,16 @@ export function Settings({
         throw new Error(data.error || `HTTP ${response.status}`);
       }
 
+      // コンテキストサイズが取得できた場合は設定を更新
+      if (data.contextSize && data.contextSize !== config.contextSize) {
+        onChange({ ...config, contextSize: data.contextSize });
+      }
+
       const modelNames = data.modelNames?.join(', ') || '';
+      const contextInfo = data.contextSize ? ` (Context: ${data.contextSize.toLocaleString()})` : '';
       setConnectionResult({
         type: 'success',
-        text: `接続成功！${data.modelCount}個のモデルを検出${modelNames ? `: ${modelNames}` : ''}`,
+        text: `接続成功！${data.modelCount}個のモデルを検出${modelNames ? `: ${modelNames}` : ''}${contextInfo}`,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : '不明なエラー';

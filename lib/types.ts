@@ -6,6 +6,7 @@ export interface LLMConfig {
   baseUrl: string;
   model: string;
   apiKey?: string;  // LLM API キー（オプション）
+  contextSize?: number;  // コンテキストウィンドウサイズ（接続テストで取得）
 }
 
 export interface LLMGenerateOptions {
@@ -70,6 +71,7 @@ export interface ProviderSettings {
   baseUrl: string;
   model: string;
   apiKey?: string;
+  contextSize?: number;  // コンテキストウィンドウサイズ
 }
 
 // 全プロバイダーの設定を保存する型

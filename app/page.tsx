@@ -129,6 +129,7 @@ export default function Home() {
           baseUrl: cleanedConfig.baseUrl,
           model: cleanedConfig.model,
           apiKey: cleanedConfig.apiKey,
+          contextSize: cleanedConfig.contextSize,
         },
       };
       localStorage.setItem(PROVIDER_SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
@@ -148,6 +149,7 @@ export default function Home() {
         baseUrl: savedSettings.baseUrl,
         model: savedSettings.model,
         apiKey: savedSettings.apiKey,
+        contextSize: savedSettings.contextSize,
       };
     } else if (preset) {
       // プリセットを使用
@@ -187,6 +189,16 @@ export default function Home() {
     totalTimeMs: 0,
     isGenerating: false,
   });
+
+  // llmConfig.contextSizeが変更されたらメトリクスを更新
+  useEffect(() => {
+    const contextSize = llmConfig.contextSize || DEFAULT_CONTEXT_WINDOW;
+    setMetrics(prev => ({
+      ...prev,
+      contextWindowSize: contextSize,
+      contextUsagePercent: ((prev.inputTokens + prev.outputTokens) / contextSize) * 100,
+    }));
+  }, [llmConfig.contextSize]);
 
   const chatInputRef = useRef<ChatInputRef>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -460,7 +472,7 @@ export default function Home() {
                 onClick={() => {
                   setMessages([]);
                   setMetrics({
-                    contextWindowSize: DEFAULT_CONTEXT_WINDOW,
+                    contextWindowSize: llmConfig.contextSize || DEFAULT_CONTEXT_WINDOW,
                     inputTokens: 0,
                     outputTokens: 0,
                     contextUsagePercent: 0,
