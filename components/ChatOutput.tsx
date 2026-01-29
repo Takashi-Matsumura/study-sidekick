@@ -160,9 +160,20 @@ function MarkdownContent({ content }: { content: string }) {
     return <MarkdownLines content={content} />;
   }
 
+  // 連続するthinkパーツを1つにマージ
+  const mergedParts: Array<{ type: 'think' | 'content'; text: string }> = [];
+  for (const part of parts) {
+    const last = mergedParts[mergedParts.length - 1];
+    if (last && last.type === 'think' && part.type === 'think') {
+      last.text += part.text;
+    } else {
+      mergedParts.push({ ...part });
+    }
+  }
+
   return (
     <div className="space-y-2">
-      {parts.map((part, i) => {
+      {mergedParts.map((part, i) => {
         if (part.type === 'think') {
           return <ThinkingBlock key={i} content={part.text} />;
         }
