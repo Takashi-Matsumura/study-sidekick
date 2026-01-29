@@ -40,7 +40,7 @@ class OpenAICompatibleProvider implements LLMProvider {
             { role: 'user', content: prompt },
           ],
           temperature: options?.temperature ?? 0.7,
-          max_tokens: options?.maxTokens ?? 2048,
+          max_tokens: options?.maxTokens ?? -1,
           stream: false,
         }),
       });
@@ -90,7 +90,7 @@ class OpenAICompatibleProvider implements LLMProvider {
           model: this.config.model,
           messages,
           temperature: options?.temperature ?? 0.7,
-          max_tokens: options?.maxTokens ?? 2048,
+          max_tokens: options?.maxTokens ?? -1,
           stream: true,
         }),
       });
