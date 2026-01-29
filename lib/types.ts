@@ -35,25 +35,25 @@ export const CHAT_MODES: ChatModeInfo[] = [
   {
     id: 'explain',
     name: 'やさしく説明',
-    description: '高校生にもわかりやすく説明します',
+    description: 'わかりやすく説明',
     icon: 'book',
   },
   {
     id: 'idea',
     name: '企画アイデア',
-    description: '新規案・メリデメ・実現手順を提案',
+    description: '企画・提案を支援',
     icon: 'lightbulb',
   },
   {
     id: 'search',
     name: '検索して要約',
-    description: 'Webを検索して要点をまとめます',
+    description: 'Web検索して要約',
     icon: 'search',
   },
   {
     id: 'rag',
     name: 'ナレッジ検索',
-    description: '社内ナレッジベースから回答します',
+    description: 'ナレッジから回答',
     icon: 'database',
   },
 ];
