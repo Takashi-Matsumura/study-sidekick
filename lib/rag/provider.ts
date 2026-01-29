@@ -1,7 +1,9 @@
 import { RAGQueryResponse, DEFAULT_RAG_CONFIG } from '../types';
 
 const getBaseUrl = (customUrl?: string) => {
-  return customUrl || process.env.RAG_BASE_URL || DEFAULT_RAG_CONFIG.baseUrl;
+  const isDefault = !customUrl || customUrl === DEFAULT_RAG_CONFIG.baseUrl;
+  if (!isDefault) return customUrl;
+  return process.env.RAG_BASE_URL || DEFAULT_RAG_CONFIG.baseUrl;
 };
 
 export interface RAGQueryOptions {
